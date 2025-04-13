@@ -35,7 +35,7 @@ Resources:
           KeyType: HASH
         - AttributeName: classdate
           KeyType: RANGE
-      BillingMode: PAYPERREQUEST
+      # BillingMode: PAYPERREQUEST
 
   # -------------------- IAM Role for Lambda --------------------
   Proj3LambdaExecutionRole:
