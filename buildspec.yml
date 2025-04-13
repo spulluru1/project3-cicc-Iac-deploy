@@ -3,19 +3,22 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      python: 3.9
+      python: 3.13
     commands:
       - echo Installing zip if not available
       - apt-get update && apt-get install -y zip || true
   build:
     commands:
-      - echo Zipping Lambda function...
-      - zip -r attendanceMatch.zip attendanceMatch.py
-      - echo Preparing build artifacts...
-      - mkdir -p build
-      - cp attendanceMatch.zip build/
-      - cp template.yaml build/
-
+      - echo "Zipping Lambda code..."
+      - mkdir -p output
+      - zip -r output/attendanceMatch.zip lambda/
+      - echo "Uploading to S3..."
+      - aws s3 cp output/attendanceMatch.zip s3://proj3-uco-bucket/lambda/attendanceMatch.zip
+      - echo "Updating Lambda code..."
+      - aws lambda update-function-code \
+          --function-name proj3-attendanceMatch \
+          --s3-bucket proj3-uco-bucket \
+          --s3-key lambda/attendanceMatch.zip
 artifacts:
   files:
     - build/*

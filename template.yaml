@@ -88,11 +88,9 @@ Resources:
       FunctionName: proj3-attendanceMatch
       Handler: attendanceMatch.lambda_handler
       Role: !GetAtt Proj3LambdaExecutionRole.Arn
-      Code:
-        S3Bucket: proj3-uco-bucket
-        S3Key: build/attendanceMatch.zip
-      Runtime: python3.9
+      Runtime: Python 3.13
       Timeout: 30
+# omit code here just create lambda fn , later buildspec.yml creates zip file that required in lambda
 
   # -------------------- API Gateway --------------------
   Proj3RestApi:
