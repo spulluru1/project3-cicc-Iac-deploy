@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure for Proj3 - Attendance Web App
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Description: GitHub Repository (e.g., user/repo)
+
+Resources:
+
+  # -------------------- S3 Bucket --------------------
+  Proj3AttendanceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: proj3-uco-bucket
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ['*']
+            AllowedMethods: ['GET', 'PUT', 'POST']
+            AllowedHeaders: ['*']
+            MaxAge: 3000
+
+  # -------------------- DynamoDB Table --------------------
+  Proj3DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: proj3-records
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: classdate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        - AttributeName: classdate
+          KeyType: RANGE
+      BillingMode: PAYPERREQUEST
+
+  # -------------------- IAM Role for Lambda --------------------
+  Proj3LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: proj3-lambda-execution-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: proj3-lambda-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                  - rekognition:CompareFaces
+                Resource:
+                  - arn:aws:s3:::proj3-uco-bucket
+                  - arn:aws:s3:::proj3-uco-bucket/*
+              - Effect: Allow
+                Action:
+                  - rekognition:CompareFaces
+                  - rekognition:DetectFaces
+                Resource: '*'
+              - Effect: Allow
+                Action: textract:DetectDocumentText
+                Resource: '*'
+              - Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: arn:aws:dynamodb:us-east-1:976193232154:table/participation-records
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # -------------------- Lambda Function --------------------
+  Proj3AttendanceLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: proj3-attendanceMatch
+      Handler: attendanceMatch.lambda_handler
+      Role: !GetAtt Proj3LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: proj3-artifact-bucket
+        S3Key: lambda/attendanceMatch.zip
+      Runtime: python3.9
+      Timeout: 30
+
+  # -------------------- API Gateway --------------------
+  Proj3RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: proj3-cicc-attendance-api
+
+  Proj3ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt Proj3RestApi.RootResourceId
+      PathPart: attendance
+      RestApiId: !Ref Proj3RestApi
+
+  Proj3ApiMethodOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref Proj3ApiResource
+      RestApiId: !Ref Proj3RestApi
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'*'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  Proj3ApiMethodPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      AuthorizationType: NONE
+      ResourceId: !Ref Proj3ApiResource
+      RestApiId: !Ref Proj3RestApi
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt Proj3AttendanceLambda.Arn
+      MethodResponses:
+        - StatusCode: 200
+
+  Proj3ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: [Proj3ApiMethodPost]
+    Properties:
+      RestApiId: !Ref Proj3RestApi
+      StageName: dev
+
+  Proj3LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Proj3AttendanceLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${Proj3RestApi}/*/*/attendance
+
+  # -------------------- Cognito Identity Pool --------------------
+  Proj3CognitoIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: proj3-identity-pool
+      AllowUnauthenticatedIdentities: true
+
+  Proj3CognitoUnauthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: proj3-cognito-unauth-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref Proj3CognitoIdentityPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: unauthenticated
+      Policies:
+        - PolicyName: proj3-cognito-s3-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - arn:aws:s3:::proj3-uco-bucket
+                  - arn:aws:s3:::proj3-uco-bucket/*
+        - PolicyName: proj3-cognito-get-creds
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: cognito-identity:GetCredentialsForIdentity
+                Resource: '*'
+
+  Proj3IdentityPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref Proj3CognitoIdentityPool
+      Roles:
+        unauthenticated: !GetAtt Proj3CognitoUnauthRole.Arn
+
+Outputs:
+  ApiInvokeURL:
+    Value: !Sub https://${Proj3RestApi}.execute-api.${AWS::Region}.amazonaws.com/dev/attendance
+    Description: API endpoint for attendance
+
+  CognitoIdentityPoolId:
+    Value: !Ref Proj3CognitoIdentityPool
+    Description: Cognito Identity Pool ID for index.html S3 upload
+
+  S3Bucket:
+    Value: !Ref Proj3AttendanceBucket
+    Description: S3 Bucket used for attendance images
