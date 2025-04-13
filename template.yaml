@@ -35,7 +35,7 @@ Resources:
           KeyType: HASH
         - AttributeName: classdate
           KeyType: RANGE
-      # BillingMode: PAYPERREQUEST
+      BillingMode: PAYPERREQUEST
 
   # -------------------- IAM Role for Lambda --------------------
   Proj3LambdaExecutionRole:
@@ -73,7 +73,7 @@ Resources:
                 Resource: '*'
               - Effect: Allow
                 Action: dynamodb:PutItem
-                Resource: arn:aws:dynamodb:us-east-1:976193232154:table/participation-records
+                Resource: arn:aws:dynamodb:us-east-1:976193232154:table/proj3-records
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -90,7 +90,7 @@ Resources:
       Role: !GetAtt Proj3LambdaExecutionRole.Arn
       Code:
         S3Bucket: proj3-artifact-bucket
-        S3Key: lambda/attendanceMatch.zip
+        S3Key: build/attendanceMatch.zip
       Runtime: python3.9
       Timeout: 30
 

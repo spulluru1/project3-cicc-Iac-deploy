@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo Installing zip if not available
+      - apt-get update && apt-get install -y zip || true
+  build:
+    commands:
+      - echo Zipping Lambda function...
+      - zip -r attendanceMatch.zip attendanceMatch.py
+      - echo Preparing build artifacts...
+      - mkdir -p build
+      - cp attendanceMatch.zip build/
+      - cp template.yaml build/
+
+artifacts:
+  files:
+    - build/*
+  discard-paths: yes
