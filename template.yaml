@@ -165,64 +165,64 @@ Resources:
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${Proj3RestApi}/*/*/attendance
 
   # -------------------- Cognito Identity Pool --------------------
-  Proj3CognitoIdentityPool:
-    Type: AWS::Cognito::IdentityPool
-    Properties:
-      IdentityPoolName: proj3-identity-pool
-      AllowUnauthenticatedIdentities: true
+  # Proj3CognitoIdentityPool:
+  #   Type: AWS::Cognito::IdentityPool
+  #   Properties:
+  #     IdentityPoolName: proj3-identity-pool
+  #     AllowUnauthenticatedIdentities: true
 
-  Proj3CognitoUnauthRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: proj3-cognito-unauth-role
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: cognito-identity.amazonaws.com
-            Action: sts:AssumeRoleWithWebIdentity
-            Condition:
-              StringEquals:
-                cognito-identity.amazonaws.com:aud: !Ref Proj3CognitoIdentityPool
-              ForAnyValue:StringLike:
-                cognito-identity.amazonaws.com:amr: unauthenticated
-      Policies:
-        - PolicyName: proj3-cognito-s3-access
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:GetObject
-                  - s3:ListBucket
-                Resource:
-                  - arn:aws:s3:::proj3-uco-bucket
-                  - arn:aws:s3:::proj3-uco-bucket/*
-        - PolicyName: proj3-cognito-get-creds
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: cognito-identity:GetCredentialsForIdentity
-                Resource: '*'
+  # Proj3CognitoUnauthRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: proj3-cognito-unauth-role
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Federated: cognito-identity.amazonaws.com
+  #           Action: sts:AssumeRoleWithWebIdentity
+  #           Condition:
+  #             StringEquals:
+  #               cognito-identity.amazonaws.com:aud: !Ref Proj3CognitoIdentityPool
+  #             ForAnyValue:StringLike:
+  #               cognito-identity.amazonaws.com:amr: unauthenticated
+  #     Policies:
+  #       - PolicyName: proj3-cognito-s3-access
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - s3:PutObject
+  #                 - s3:GetObject
+  #                 - s3:ListBucket
+  #               Resource:
+  #                 - arn:aws:s3:::proj3-uco-bucket
+  #                 - arn:aws:s3:::proj3-uco-bucket/*
+  #       - PolicyName: proj3-cognito-get-creds
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Effect: Allow
+  #               Action: cognito-identity:GetCredentialsForIdentity
+  #               Resource: '*'
 
-  Proj3IdentityPoolRoleAttachment:
-    Type: AWS::Cognito::IdentityPoolRoleAttachment
-    Properties:
-      IdentityPoolId: !Ref Proj3CognitoIdentityPool
-      Roles:
-        unauthenticated: !GetAtt Proj3CognitoUnauthRole.Arn
+  # Proj3IdentityPoolRoleAttachment:
+  #   Type: AWS::Cognito::IdentityPoolRoleAttachment
+  #   Properties:
+  #     IdentityPoolId: !Ref Proj3CognitoIdentityPool
+  #     Roles:
+  #       unauthenticated: !GetAtt Proj3CognitoUnauthRole.Arn
 
 Outputs:
   ApiInvokeURL:
     Value: !Sub https://${Proj3RestApi}.execute-api.${AWS::Region}.amazonaws.com/dev/attendance
     Description: API endpoint for attendance
 
-  CognitoIdentityPoolId:
-    Value: !Ref Proj3CognitoIdentityPool
-    Description: Cognito Identity Pool ID for index.html S3 upload
+  # CognitoIdentityPoolId:
+  #   Value: !Ref Proj3CognitoIdentityPool
+  #   Description: Cognito Identity Pool ID for index.html S3 upload
 
   S3Bucket:
     Value: !Ref Proj3AttendanceBucket
