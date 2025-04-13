@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Infrastructure for Proj3 - Attendance Web App
 
-Parameters:
-  GitHubRepo:
-    Type: String
-    Description: GitHub Repository (e.g., user/repo)
+# Parameters:
+#   GitHubRepo:
+#     Type: String
+#     Description: GitHub Repository (e.g., user/repo)
 
 Resources:
 
