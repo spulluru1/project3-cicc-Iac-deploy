@@ -89,7 +89,7 @@ Resources:
       Handler: attendanceMatch.lambda_handler
       Role: !GetAtt Proj3LambdaExecutionRole.Arn
       Code:
-        S3Bucket: proj3-artifact-bucket
+        S3Bucket: proj3-uco-bucket
         S3Key: build/attendanceMatch.zip
       Runtime: python3.9
       Timeout: 30
